@@ -1,0 +1,161 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.2",
+    "parameters": {
+        "name": {
+            "type": "string"
+        },
+        "accountType": {
+            "type": "string",
+            "allowedValues": [
+                "PremiumV2_LRS",
+                "PremiumV2_ZRS",
+                "Premium_LRS",
+                "Premium_ZRS",
+                "StandardV2_GRS",
+                "StandardV2_GZRS",
+                "StandardV2_LRS",
+                "StandardV2_ZRS",
+                "Standard_GRS",
+                "Standard_GZRS",
+                "Standard_LRS",
+                "Standard_RAGRS",
+                "Standard_RAGZRS",
+                "Standard_ZRS"
+            ]
+        },
+        "kind": {
+            "type": "string",
+            "allowedValues": [
+                "BlobStorage",
+                "BlockBlobStorage",
+                "FileStorage",
+                "Storage",
+                "StorageV2"
+            ]
+        },
+        "location": {
+            "type": "string",
+            "allowedValues": [
+                "eastus",
+                "eastus2",
+                "southcentralus"
+            ]
+        },
+        "accessTier": {
+            "type": "string",
+            "allowedValues": [
+                "Cold",
+                "Cool",
+                "Hot",
+                "Premium"
+            ]
+        },
+        "largeFileSharesState": {
+            "type": "string",
+            "allowedValues": ["disabled","enabled"]
+        },
+        "blobSoftDeleteRetentionDays": {
+            "type": "string",
+            "defaultValue": "7"
+        },
+        "containerSoftDeleteRetentionDays": {
+            "type": "string",
+            "defaultValue": "7"
+        },
+        "shareSoftDeleteRetentionDays": {
+            "type": "string",
+            "defaultValue": "7"
+        },
+        "keySource": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-11-01",
+            "name": "[parameters('name')]",
+            "kind": "[parameters('kind')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "allowBlobPublicAccess": "false",
+                "allowCrossTenantReplication": "false",
+                "allowSharedKeyAccess": "true",
+                "defaultToOAuthAuthentication": "false",
+                "dnsEndpointType": "Standard",
+                "encryption": {
+                    "keySource": "Microsoft.Storage",
+                    "requireInfrastructureEncryption": "true",
+                    "services": {
+                        "blob": {
+                            "enabled": "true",
+                            "keyType": "Account"
+                        },
+                        "file": {
+                            "enabled": "true",
+                            "keyType": "Account"
+                        },
+                        "queue": {
+                            "enabled": "true",
+                            "keyType": "Account"
+                        },
+                        "table": {
+                            "enabled": "true",
+                            "keyType": "Account"
+                        }
+                    }
+                },
+                "largeFileSharesState": "enabled",
+                "minimumTlsVersion": "TLS1_2",
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "defaultAction": "Allow",
+                    "virtualNetworkRules": []
+                },
+                "publicNetworkAccess": "disabled",
+                "supportsHttpsTrafficOnly": "true"
+            },
+            "sku": {
+                "name": "[parameters('accountType')]"
+            },
+            "tags": {
+                "{customized property}": "string"
+            }
+        },
+                {
+            "name": "[concat(parameters('storageAccountName'), '/default')]",
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2023-05-01",
+            "properties": {
+                "deleteRetentionPolicy": {
+                    "enabled": "true",
+                    "days": "[parameters('blobSoftDeleteRetentionDays')]"
+                },
+                "containerDeleteRetentionPolicy": {
+                    "enabled": "true",
+                    "days": "[parameters('containerSoftDeleteRetentionDays')]"
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
+            ]
+        },
+                {
+            "name": "[concat(parameters('storageAccountName'), '/default')]",
+            "type": "Microsoft.Storage/storageAccounts/fileservices",
+            "apiVersion": "2023-05-01",
+            "properties": {
+                "protocolSettings": null,
+                "shareDeleteRetentionPolicy": {
+                    "enabled": "true",
+                    "days": "[parameters('shareSoftDeleteRetentionDays')]"
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]",
+                "[concat(concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName')), '/blobServices/default')]"
+            ]
+        }
+    ]
+}
